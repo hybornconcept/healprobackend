@@ -1,0 +1,18 @@
+name = "healpro"
+main = "src/index.ts"
+compatibility_date = "2024-08-17"
+
+[[hyperdrive]]
+binding = "HYPERDRIVE"
+id = "706123facbec4617a5fe938e20eed497"
+
+[placement]
+mode = "smart"
+
+[observability]
+enabled = true
+
+[env.staging]
+hyperdrive = [ { binding = "HYPERDRIVE", id = "706123facbec4617a5fe938e20eed497", localConnectionString= "postgresql://postgres:legacy@localhost:5432/healpro_local" } ]
+
+[env.production]
