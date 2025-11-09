@@ -2,7 +2,7 @@ import { createFactory } from "hono/factory";
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
 import type { Variables } from "./types";
-import * as schema from "./db";
+import * as schema from "./db/schema";
 import { createAuth } from "./auth";
 import { env } from "cloudflare:workers";
 
