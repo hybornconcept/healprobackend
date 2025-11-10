@@ -22,6 +22,8 @@ export const hospitals = pgTable("hospitals", {
   facilityName: varchar("facility_name", { length: 200 }).notNull(),
   licenseNumber: varchar("license_number", { length: 100 }).notNull(),
   facilityType: varchar("facility_type", { length: 50 }), // 'hospital', 'clinic', etc.
+  taxId: varchar("tax_id", { length: 50 }),
+  yearEstablished: integer("year_established"),
 
   // Address
   address: text("address"),
@@ -32,6 +34,7 @@ export const hospitals = pgTable("hospitals", {
 
   // Contact information
   primaryPhone: varchar("primary_phone", { length: 32 }),
+  alternatePhone: varchar("alternate_phone", { length: 32 }),
   email: varchar("email", { length: 255 }),
   website: varchar("website", { length: 255 }),
 
@@ -47,6 +50,7 @@ export const hospitals = pgTable("hospitals", {
   staffCount: integer("staff_count"),
   acceptedInsurance: text("accepted_insurance"), // JSON array
   certifications: text("certifications"), // JSON array
+  servicesOffered: text("services_offered"), // JSON array: ['emergency_care', 'inpatient_care', etc.]
 
   // Consents
   consentTerms: boolean("consent_terms").default(false),

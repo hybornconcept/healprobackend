@@ -6,6 +6,13 @@ compatibility_date = "2024-08-17"
 binding = "HYPERDRIVE"
 id = "706123facbec4617a5fe938e20eed497"
 
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "healpro-documents"
+
+[vars]
+R2_PUBLIC_URL = "https://documents.healpro.com"
+
 [placement]
 mode = "smart"
 
@@ -13,6 +20,7 @@ mode = "smart"
 enabled = true
 
 [env.staging]
-hyperdrive = [ { binding = "HYPERDRIVE", id = "706123facbec4617a5fe938e20eed497", localConnectionString= "postgresql://postgres:legacy@localhost:5432/healpro_local" } ]
+hyperdrive = [ { binding = "HYPERDRIVE", id = "706123facbec4617a5fe938e20eed497" } ]
+r2_buckets = [{ binding = "BUCKET", bucket_name = "healpro-documents-staging" }]
 
 [env.production]

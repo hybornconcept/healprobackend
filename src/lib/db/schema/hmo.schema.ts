@@ -65,6 +65,10 @@ export const hmos = pgTable("hmos", {
   consentDataSharing: boolean("consent_data_sharing").default(false),
   consentVerification: boolean("consent_verification").default(false),
 
+  // Document uploads
+  insuranceLicenseUrl: text("insurance_license_url"),
+  financialStatementUrl: text("financial_statement_url"),
+
   // Metadata
   metadata: text("metadata").default("{}"),
 

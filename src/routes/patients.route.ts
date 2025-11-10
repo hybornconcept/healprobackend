@@ -7,6 +7,7 @@ import {
   updatePatientSchema,
   getPatientsQuerySchema,
   patientIdParamSchema,
+  idDocumentUploadSchema,
 } from "../lib/validations/patients.validation";
 
 const patientRoute = factory
@@ -29,7 +30,13 @@ const patientRoute = factory
 
       return c.json({ success: true, data: patientList });
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
   })
   // Create new patient
@@ -38,14 +45,26 @@ const patientRoute = factory
       const db = c.get("db");
       const body = c.req.valid("json");
 
+      const patientData = {
+        ...body,
+        dateOfBirth: body.dateOfBirth ? new Date(body.dateOfBirth) : undefined,
+        metadata: body.metadata ? JSON.stringify(body.metadata) : undefined,
+      };
+
       const newPatient = await db
         .insert(patients)
-        .values(body)
+        .values(patientData)
         .returning();
 
       return c.json({ success: true, data: newPatient[0] }, 201);
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
   })
   // Get patient dashboard data (for logged-in patient)
@@ -81,63 +100,92 @@ const patientRoute = factory
       // Format data for frontend (matching HealPro structure)
       const dashboardData = {
         userProfile: {
-          name: patient[0].fullName,
-          email: patient[0].email,
-          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(patient[0].fullName)}&background=random`,
+          name: patient[0].fullName || "Unknown Patient",
+          email: patient[0].email || "",
+          avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(
+            patient[0].fullName || "Unknown Patient"
+          )}&background=random`,
           stats: {
-            past: patientAppointments.filter(apt => apt.status === 'completed').length,
-            upcoming: patientAppointments.filter(apt => ['pending', 'confirmed', 'waiting'].includes(apt.status)).length
-          }
+            past: patientAppointments.filter(
+              (apt) => apt.status === "completed"
+            ).length,
+            upcoming: patientAppointments.filter((apt) =>
+              ["pending", "confirmed", "waiting"].includes(apt.status)
+            ).length,
+          },
         },
         personalDetails: [
           { label: "Full Name", value: patient[0].fullName },
-          { label: "Date of Birth", value: patient[0].dateOfBirth?.toISOString().split('T')[0] || "Not provided" },
+          {
+            label: "Date of Birth",
+            value:
+              patient[0].dateOfBirth?.toISOString().split("T")[0] ||
+              "Not provided",
+          },
           { label: "Gender", value: patient[0].gender || "Not provided" },
           { label: "Phone Number", value: patient[0].phoneNumber },
-          { label: "Occupation", value: patient[0].occupation || "Not provided" },
-          { label: "Address", value: patient[0].address || "Not provided" }
+          {
+            label: "Occupation",
+            value: patient[0].occupation || "Not provided",
+          },
+          { label: "Address", value: patient[0].address || "Not provided" },
         ],
         contactDetails: [
-          { label: "Emergency Contact", value: patient[0].emergencyContactName || "Not provided" },
-          { label: "Emergency Phone", value: patient[0].emergencyPhone || "Not provided" },
-          { label: "Primary Care Physician", value: patient[0].primaryCarePhysician },
+          {
+            label: "Emergency Contact",
+            value: patient[0].emergencyContactName || "Not provided",
+          },
+          {
+            label: "Emergency Phone",
+            value: patient[0].emergencyPhone || "Not provided",
+          },
+          {
+            label: "Primary Care Physician",
+            value: patient[0].primaryCarePhysician,
+          },
           { label: "Insurance Provider", value: patient[0].insuranceProvider },
-          { label: "Policy Number", value: patient[0].insurancePolicyNumber }
+          { label: "Policy Number", value: patient[0].insurancePolicyNumber },
         ],
-        appointments: patientAppointments.map(apt => ({
-          date: apt.scheduledDate.toISOString().split('T')[0],
+        appointments: patientAppointments.map((apt) => ({
+          date: apt.scheduledDate.toISOString().split("T")[0],
           time: apt.scheduledTime,
           facility: "General Hospital Lagos", // This would come from hospital table
           unit: apt.unit,
           type: apt.appointmentType,
           coverage: apt.coveragePercentage || 0,
-          claimStatus: apt.status === 'completed' ? 'Approved' : 'In-Review'
+          claimStatus: apt.status === "completed" ? "Approved" : "In-Review",
         })),
         hospitalInfo: {
           name: "General Hospital Lagos",
           address: "Victoria Island, Lagos State",
           phone: "+234 123 456 7890",
-          email: "info@generalhospitallagos.ng"
+          email: "info@generalhospitallagos.ng",
         },
         serviceTimeline: [
           {
             title: "Check lab",
             date: "23 Nov 2024 • 5:23 PM",
             details: "Blood test, urine analysis, cholesterol screening",
-            status: "completed"
+            status: "completed",
           },
           {
             title: "Control of lab results",
             date: "18 Nov 2024 • 5:23 PM",
             details: "Review blood work, discuss findings with physician",
-            status: "pending"
-          }
-        ]
+            status: "pending",
+          },
+        ],
       };
 
       return c.json({ success: true, data: dashboardData });
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
   })
   // Get specific patient by ID
@@ -157,31 +205,56 @@ const patientRoute = factory
 
       return c.json({ success: true, data: patient[0] });
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
   })
   // Update patient
-  .put("/:id", zValidator("param", patientIdParamSchema), zValidator("json", updatePatientSchema), async (c) => {
-    try {
-      const db = c.get("db");
-      const { id } = c.req.valid("param");
-      const body = c.req.valid("json");
+  .put(
+    "/:id",
+    zValidator("param", patientIdParamSchema),
+    zValidator("json", updatePatientSchema),
+    async (c) => {
+      try {
+        const db = c.get("db");
+        const { id } = c.req.valid("param");
+        const body = c.req.valid("json");
 
-      const updatedPatient = await db
-        .update(patients)
-        .set(body)
-        .where(eq(patients.id, id))
-        .returning();
+        const updateData = {
+          ...body,
+          dateOfBirth: body.dateOfBirth
+            ? new Date(body.dateOfBirth)
+            : undefined,
+          metadata: body.metadata ? JSON.stringify(body.metadata) : undefined,
+        };
 
-      if (updatedPatient.length === 0) {
-        return c.json({ success: false, error: "Patient not found" }, 404);
+        const updatedPatient = await db
+          .update(patients)
+          .set(updateData)
+          .where(eq(patients.id, id))
+          .returning();
+
+        if (updatedPatient.length === 0) {
+          return c.json({ success: false, error: "Patient not found" }, 404);
+        }
+
+        return c.json({ success: true, data: updatedPatient[0] });
+      } catch (error) {
+        return c.json(
+          {
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+          },
+          500
+        );
       }
-
-      return c.json({ success: true, data: updatedPatient[0] });
-    } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
     }
-  })
+  )
   // Delete patient
   .delete("/:id", zValidator("param", patientIdParamSchema), async (c) => {
     try {
@@ -198,6 +271,16 @@ const patientRoute = factory
       }
 
       return c.json({ success: true, data: deletedPatient[0] });
+    } catch (error) {
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
+    }
+  })
   // Get patient appointment statistics
   .get("/:id/stats", zValidator("param", patientIdParamSchema), async (c) => {
     try {
@@ -211,15 +294,28 @@ const patientRoute = factory
 
       const stats = {
         total: patientAppointments.length,
-        completed: patientAppointments.filter(apt => apt.status === 'completed').length,
-        upcoming: patientAppointments.filter(apt => ['pending', 'confirmed', 'waiting'].includes(apt.status)).length,
-        cancelled: patientAppointments.filter(apt => apt.status === 'cancelled').length,
-        noShow: patientAppointments.filter(apt => apt.status === 'no-show').length
+        completed: patientAppointments.filter(
+          (apt) => apt.status === "completed"
+        ).length,
+        upcoming: patientAppointments.filter((apt) =>
+          ["pending", "confirmed", "waiting"].includes(apt.status)
+        ).length,
+        cancelled: patientAppointments.filter(
+          (apt) => apt.status === "cancelled"
+        ).length,
+        noShow: patientAppointments.filter((apt) => apt.status === "no-show")
+          .length,
       };
 
       return c.json({ success: true, data: stats });
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
   })
   // Get patient medical history/timeline
@@ -232,29 +328,105 @@ const patientRoute = factory
       const patientAppointments = await db
         .select()
         .from(appointments)
-        .where(and(
-          eq(appointments.patientId, id),
-          eq(appointments.status, 'completed')
-        ))
+        .where(
+          and(
+            eq(appointments.patientId, id),
+            eq(appointments.status, "completed")
+          )
+        )
         .orderBy(desc(appointments.completedAt));
 
       // For now, return appointment-based history
       // In a full implementation, this would include clinical encounters
-      const history = patientAppointments.map(apt => ({
+      const history = patientAppointments.map((apt) => ({
         id: apt.id,
         type: apt.appointmentType,
-        date: apt.completedAt?.toISOString().split('T')[0] || apt.scheduledDate.toISOString().split('T')[0],
+        date:
+          apt.completedAt?.toISOString().split("T")[0] ||
+          apt.scheduledDate.toISOString().split("T")[0],
         time: apt.scheduledTime,
         facility: "General Hospital Lagos", // Would come from hospital table
         unit: apt.unit,
         reason: apt.reason,
-        status: 'completed'
+        status: "completed",
       }));
 
       return c.json({ success: true, data: history });
     } catch (error) {
-      return c.json({ success: false, error: error.message }, 500);
+      return c.json(
+        {
+          success: false,
+          error: error instanceof Error ? error.message : "Unknown error",
+        },
+        500
+      );
     }
-  });
+  })
+  // Upload patient identification document
+  .post(
+    "/:id/upload-id",
+    zValidator("param", patientIdParamSchema),
+    zValidator("form", idDocumentUploadSchema),
+    async (c) => {
+      try {
+        const db = c.get("db");
+        const { id } = c.req.valid("param");
+        const { file } = c.req.valid("form");
+
+        // Verify patient exists
+        const patient = await db
+          .select()
+          .from(patients)
+          .where(eq(patients.id, id));
+
+        if (patient.length === 0) {
+          return c.json({ success: false, error: "Patient not found" }, 404);
+        }
+
+        // Delete existing ID document if it exists
+        if (patient[0].idDocumentUrl) {
+          try {
+            const oldFilename = patient[0].idDocumentUrl.split("/").pop();
+            if (oldFilename) {
+              await c.env.BUCKET.delete(oldFilename);
+            }
+          } catch (error) {
+            console.error("Error deleting old ID document:", error);
+          }
+        }
+
+        // Upload new ID document
+        const imageBuffer = await file.arrayBuffer();
+        const filename = `patient-${id}-id-${Date.now()}-${file.name}`;
+        await c.env.BUCKET.put(filename, imageBuffer, {
+          httpMetadata: { contentType: file.type },
+        });
+
+        const documentUrl = `${c.env.R2_PUBLIC_URL}/${filename}`;
+
+        // Update patient record with new document URL
+        const updatedPatient = await db
+          .update(patients)
+          .set({ idDocumentUrl: documentUrl })
+          .where(eq(patients.id, id))
+          .returning();
+
+        return c.json({
+          success: true,
+          message: "ID document uploaded successfully",
+          data: { url: documentUrl },
+        });
+      } catch (error) {
+        console.error("Error uploading ID document:", error);
+        return c.json(
+          {
+            success: false,
+            message: "Failed to upload ID document",
+          },
+          500
+        );
+      }
+    }
+  );
 
 export default patientRoute;

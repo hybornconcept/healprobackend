@@ -45,3 +45,22 @@ export const getPatientsQuerySchema = z.object({
 export const patientIdParamSchema = z.object({
   id: z.string().transform(Number),
 });
+
+// File upload schema for ID documents
+export const idDocumentUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine((file) => {
+      const allowedTypes = [
+        "image/svg+xml",
+        "image/png",
+        "image/jpeg",
+        "image/gif",
+      ];
+      return allowedTypes.includes(file.type);
+    }, "Invalid file type. Only SVG, PNG, JPG, and GIF are allowed.")
+    .refine(
+      (file) => file.size <= 5 * 1024 * 1024,
+      "File size too large. Maximum size is 5MB."
+    ),
+});

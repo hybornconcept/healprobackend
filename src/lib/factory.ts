@@ -9,6 +9,7 @@ import { env } from "cloudflare:workers";
 // Our factory with environment and variables types
 export const factory = createFactory<{
   Variables: Variables;
+  Bindings: Cloudflare.Env;
 }>({
   initApp: (app) => {
     // Global middleware for database

@@ -34,6 +34,8 @@ export const createHmoSchema = z.object({
   consentTerms: z.boolean().default(false),
   consentDataSharing: z.boolean().default(false),
   consentVerification: z.boolean().default(false),
+  insuranceLicenseUrl: z.string().url().optional(),
+  financialStatementUrl: z.string().url().optional(),
   metadata: z.record(z.any()).optional(),
 });
 
@@ -50,4 +52,37 @@ export const getHmosQuerySchema = z.object({
 // Params schema for ID-based routes
 export const hmoIdParamSchema = z.object({
   id: z.string().transform(Number),
+});
+
+// File upload schemas
+export const insuranceLicenseUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine(
+      (file) => file.size <= 10 * 1024 * 1024,
+      "File size must be less than 10MB"
+    )
+    .refine(
+      (file) =>
+        ["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(
+          file.type
+        ),
+      "File must be PDF, JPG, or PNG"
+    ),
+});
+
+export const financialStatementUploadSchema = z.object({
+  file: z
+    .instanceof(File)
+    .refine(
+      (file) => file.size <= 10 * 1024 * 1024,
+      "File size must be less than 10MB"
+    )
+    .refine(
+      (file) =>
+        ["application/pdf", "image/jpeg", "image/jpg", "image/png"].includes(
+          file.type
+        ),
+      "File must be PDF, JPG, or PNG"
+    ),
 });
